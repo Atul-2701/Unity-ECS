@@ -13,6 +13,8 @@ public partial struct BulletSystem : ISystem
         EntityManager entityManager = state.EntityManager;
         NativeArray<Entity> allEntities = entityManager.GetAllEntities();
 
+        PhysicsWorldSingleton physicsWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>();
+
         foreach (Entity entity in allEntities)
         {
             if(entityManager.HasComponent<BulletComponent>(entity) && entityManager.HasComponent<BulletLifeTimeComponent>(entity))
@@ -33,6 +35,24 @@ public partial struct BulletSystem : ISystem
                 }
 
                 entityManager.SetComponentData(entity, bulletLifeTimeComponent);
+
+                NativeList<ColliderCastHit> hits = new NativeList<ColliderCastHit>(Allocator.Temp);
+                float3 point1 = new float3(bulletTransform.Position - bulletTransform.Right() * 0.15f);
+                float3 point2 = new float3(bulletTransform.Position + bulletTransform.Right() * 0.15f);
+
+                physicsWorld.CapsuleCastAll(point1, point2, bulletComponent.Size / 2, float3.zero, 1f, ref hits, new CollisionFilter
+                {
+                    BelongsTo = (uint)CollisionLayer.Default,
+                    CollidesWith = (uint)CollisionLayer.Wall,
+                });
+
+                if(hits.Length > 0)
+                {
+                    entityManager.DestroyEntity(entity);
+                }
+
+                hits.Dispose();
+
             }
         }
     }
