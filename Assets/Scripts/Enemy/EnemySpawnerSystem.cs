@@ -1,10 +1,12 @@
-using UnityEngine;
-using Unity.Entities;
-using Unity.Collections;
 using System;
-using Unity.Transforms;
+using Unity.Burst;
+using Unity.Collections;
+using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Transforms;
+using UnityEngine;
 
+[BurstCompile]
 public partial struct EnemySpawnerSystem : ISystem
 {
     private EntityManager entityManager;
@@ -59,6 +61,7 @@ public partial struct EnemySpawnerSystem : ISystem
                 float angle = math.atan2(direction.x, direction.y);
                 angle -= math.radians(90f);
                 quaternion lookRot = quaternion.AxisAngle(new float3(0, 0, 1), angle);
+                enemyTransform.Rotation = lookRot;
 
                 ECB.SetComponent(enemyEntity, enemyTransform);
 
@@ -71,6 +74,10 @@ public partial struct EnemySpawnerSystem : ISystem
                 ECB.Playback(entityManager);
                 ECB.Dispose();
             }
+
+            int desiredEnemiesPerWave = enemySpawnerComponent.NumOfEnemiesToSpawnPerSecond + enemySpawnerComponent.NumOfEnemiesToSpawnIncrementAmount;
+            int enemiesPerWave = math.min(desiredEnemiesPerWave, enemySpawnerComponent.MaxNumberOfEnemiesToSpawnperSecond);
+            enemySpawnerComponent.NumOfEnemiesToSpawnPerSecond = enemiesPerWave;
 
 
 

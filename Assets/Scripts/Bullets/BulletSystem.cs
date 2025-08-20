@@ -6,6 +6,7 @@ using Unity.Transforms;
 using Unity.Burst;
 using Unity.Physics;
 
+[BurstCompile]
 public partial struct BulletSystem : ISystem
 {
    private void OnUpdate(ref SystemState state)
@@ -40,14 +41,32 @@ public partial struct BulletSystem : ISystem
                 float3 point1 = new float3(bulletTransform.Position - bulletTransform.Right() * 0.15f);
                 float3 point2 = new float3(bulletTransform.Position + bulletTransform.Right() * 0.15f);
 
+                uint layerMask = LayerMaskHelper.GetLayerMaskFromTwoLayers(CollisionLayer.Wall, CollisionLayer.Enemy);
+
                 physicsWorld.CapsuleCastAll(point1, point2, bulletComponent.Size / 2, float3.zero, 1f, ref hits, new CollisionFilter
                 {
                     BelongsTo = (uint)CollisionLayer.Default,
-                    CollidesWith = (uint)CollisionLayer.Wall,
+                    CollidesWith = layerMask
                 });
 
                 if(hits.Length > 0)
                 {
+                    for(int i = 0; i < hits.Length; i++)
+                    {
+                        Entity hitEntity = hits[i].Entity;
+                        if (entityManager.HasComponent<EnemyComponent>(hitEntity))
+                        {
+                            EnemyComponent enemyComponent = entityManager.GetComponentData<EnemyComponent>(hitEntity);
+                            enemyComponent.CurrentHealth -= bulletComponent.Damage;
+                            entityManager.SetComponentData(hitEntity, enemyComponent);
+                            
+                            if(enemyComponent.CurrentHealth <= 0f)
+                            {
+                                entityManager.DestroyEntity(hitEntity);
+                            }
+                        }
+                    }
+                    
                     entityManager.DestroyEntity(entity);
                 }
 
